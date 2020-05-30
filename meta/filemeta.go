@@ -5,7 +5,11 @@
 
 package meta
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/ronething/pan/db"
+)
 
 //FileMeta 文件元数据模型
 type FileMeta struct {
@@ -28,9 +32,29 @@ func UpdateFileMeta(f FileMeta) { // TODO: 考虑线程安全问题
 	fileMetas[f.FileSha1] = f
 }
 
+//UpdateFileMetaDB 新增/更新文件元数据到数据库
+func UpdateFileMetaDB(f FileMeta) bool { // TODO: 考虑线程安全问题
+	return db.OnFileUploadFinished(f.FileSha1, f.FileName, f.FileSize, f.Location)
+}
+
 //GetFileMeta 根据 hash 获取文件元数据
 func GetFileMeta(fileSha1 string) FileMeta {
 	return fileMetas[fileSha1]
+}
+
+//GetFileMetaDB 从数据库获取文件元数据
+func GetFileMetaDB(fileSha1 string) (FileMeta, error) {
+	tfile, err := db.GetFileMeta(fileSha1)
+	if err != nil {
+		return FileMeta{}, err
+	}
+	tMeta := FileMeta{
+		FileSha1: tfile.FileHash,
+		FileName: tfile.FileName.String,
+		FileSize: tfile.FileSize.Int64,
+		Location: tfile.FileAddr.String,
+	}
+	return tMeta, nil
 }
 
 //GetLastFileMetas 获取数据
