@@ -70,6 +70,26 @@ func GetLastFileMetas(count int) []FileMeta {
 	return fMetaArray[0:count]
 }
 
+//GetLastFileMetasDB 批量从数据库获取元数据
+func GetLastFileMetasDB(limit int) ([]FileMeta, error) {
+	tfiles, err := db.GetFileMetaList(limit)
+	if err != nil {
+		return make([]FileMeta, 0), err
+	}
+	tfilesMap := make([]FileMeta, len(tfiles))
+	for i := 0; i < len(tfilesMap); i++ {
+		tfilesMap[i] = FileMeta{
+			FileSha1: tfiles[i].FileHash,
+			FileName: tfiles[i].FileName.String,
+			FileSize: tfiles[i].FileSize.Int64,
+			Location: tfiles[i].FileAddr.String,
+		}
+	}
+
+	return tfilesMap, nil
+
+}
+
 //RemoveFileMeta 删除元数据
 func RemoveFileMeta(filehash string) {
 	delete(fileMetas, filehash) // TODO: 考虑线程安全问题

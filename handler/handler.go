@@ -95,7 +95,8 @@ func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	limitCnt, _ := strconv.Atoi(r.Form.Get("limit"))
-	fileMetas := meta.GetLastFileMetas(limitCnt)
+	//fileMetas := meta.GetLastFileMetas(limitCnt)
+	fileMetas, _ := meta.GetLastFileMetasDB(limitCnt)
 
 	data, err := json.Marshal(fileMetas)
 	if err != nil {
