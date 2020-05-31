@@ -7,8 +7,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/ronething/pan/handler"
 	"net/http"
+
+	"github.com/ronething/pan/handler"
 )
 
 func main() {
@@ -19,6 +20,8 @@ func main() {
 	http.HandleFunc("/file/download", handler.DownloadHandler)     // 下载
 	http.HandleFunc("/file/update", handler.FileMetaUpdateHandler) // 重命名
 	http.HandleFunc("/file/delete", handler.FileDeleteHandler)     // 删除
+
+	http.HandleFunc("/user/signup", handler.SignupHandler) // 用户注册
 	err := http.ListenAndServe("127.0.0.1:8887", nil)
 	if err != nil {
 		fmt.Printf("Failed to start server, err: %s", err.Error())
