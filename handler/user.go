@@ -6,8 +6,10 @@
 package handler
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/ronething/pan/db"
 	"github.com/ronething/pan/util"
@@ -51,10 +53,55 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 
 //SignInHandler 用户登录
 func SignInHandler(w http.ResponseWriter, r *http.Request) {
-	// 1、校验用户名及密码
+	if r.Method == http.MethodGet {
+		http.Redirect(w, r, "/static/view/signin.html", http.StatusFound)
+		return
+	}
 
+	r.ParseForm()
+
+	username := r.Form.Get("username")
+	password := r.Form.Get("password")
+
+	encPassword := util.Sha1([]byte(password + pwd_salt))
+
+	// 1、校验用户名及密码
+	pwdChecked := db.UserSignIn(username, encPassword)
+	if !pwdChecked {
+		w.Write([]byte("FAILED"))
+		return
+	}
 	// 2、生成访问凭证
+	token := GenToken(username)
+	upRes := db.UpdateToken(username, token)
+	if !upRes {
+		w.Write([]byte("FAILED"))
+		return
+	}
 
 	// 3、登录成功重定向到首页
+	resp := util.RespMsg{
+		Code: 0,
+		Msg:  "OK",
+		Data: struct {
+			Location string
+			UserName string
+			Token    string
+		}{
+			Location: "http://" + r.Host + "/static/view/home.html",
+			UserName: username,
+			Token:    token,
+		},
+	}
 
+	w.Write(resp.JSONBytes())
+
+}
+
+// GenToken : 生成token 40 位
+func GenToken(username string) string {
+	// 40位字符:md5(username+timestamp+token_salt)+timestamp[:8]
+	ts := fmt.Sprintf("%x", time.Now().Unix())
+	tokenPrefix := util.MD5([]byte(username + ts + "_tokensalt"))
+	return tokenPrefix + ts[:8]
 }

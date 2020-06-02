@@ -11,6 +11,15 @@ import (
 	"github.com/ronething/pan/db/mysql"
 )
 
+type User struct {
+	Username     string
+	Email        string
+	Phone        string
+	SignupAt     string
+	LastActiveAt string
+	Status       int
+}
+
 //UserSignUp 用户注册 DB
 func UserSignUp(username string, passwd string) bool {
 	stmt, err := mysql.DBConn().Prepare("insert ignore into tbl_user " +
@@ -36,6 +45,7 @@ func UserSignUp(username string, passwd string) bool {
 
 }
 
+//UserSignIn 用户登录 判断密码是否一致
 func UserSignIn(username string, encpwd string) bool {
 	stmt, err := mysql.DBConn().Prepare(
 		"select * from tbl_user " +
@@ -55,8 +65,54 @@ func UserSignIn(username string, encpwd string) bool {
 		fmt.Printf("username not found:%s\n", username)
 	}
 
-	pRows := mysql.ParseRows(rows)
+	pRows := mysql.ParseRows(rows) // TODO: review
+	if len(pRows) > 0 && string(pRows[0]["user_pwd"].([]byte)) == encpwd {
+		return true
+	}
 
 	return false
 
+}
+
+//GetUserInfo 查询用户信息
+func GetUserInfo(username string) (User, error) {
+	user := User{}
+
+	stmt, err := mysql.DBConn().Prepare(
+		"select user_name, signup_at from tbl_user where user_name=? limit 1",
+	)
+	if err != nil {
+		fmt.Printf("prepare sql err:%s\n", err.Error())
+		return user, err
+	}
+
+	defer stmt.Close()
+
+	err = stmt.QueryRow(username).Scan(&user.Username, &user.SignupAt)
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+
+}
+
+//UpdateToken 更新用户登录 token
+func UpdateToken(username string, token string) bool {
+	stmt, err := mysql.DBConn().Prepare(
+		"replace into tbl_user_token (`user_name`, `user_token`) values (?,?)",
+	)
+	if err != nil {
+		fmt.Printf("prepare sql err:%s\n", err.Error())
+		return false
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(username, token)
+	if err != nil {
+		fmt.Printf("exec err: %s\n", err.Error())
+		return false
+	}
+
+	return true
 }
