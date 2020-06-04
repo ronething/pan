@@ -22,6 +22,9 @@ func main() {
 	http.HandleFunc("/file/delete", handler.FileDeleteHandler)     // 删除
 
 	http.HandleFunc("/user/signup", handler.SignupHandler) // 用户注册
+	http.HandleFunc("/user/signin", handler.SignInHandler) // 用户登录
+	http.HandleFunc("/user/info", handler.UserInfoHandler)
+
 	err := http.ListenAndServe("127.0.0.1:8887", nil)
 	if err != nil {
 		fmt.Printf("Failed to start server, err: %s", err.Error())
