@@ -49,7 +49,7 @@ func UserSignUp(username string, passwd string) bool {
 func UserSignIn(username string, encpwd string) bool {
 	stmt, err := mysql.DBConn().Prepare(
 		"select * from tbl_user " +
-			"wher user_name=? limit 1")
+			"where user_name=? limit 1")
 	if err != nil {
 		fmt.Printf("Failed to select, err:%s\n", err.Error())
 		return false
@@ -70,6 +70,7 @@ func UserSignIn(username string, encpwd string) bool {
 		return true
 	}
 
+	fmt.Printf("verify username and pwd error")
 	return false
 
 }

@@ -13,7 +13,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/ronething/pan/db"
 
 	"github.com/ronething/pan/meta"
 	"github.com/ronething/pan/util"
@@ -39,7 +42,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		fileMeta := meta.FileMeta{
+		fileMeta := &meta.FileMeta{
 			FileName: head.Filename,
 			Location: "/tmp/" + head.Filename,
 			UploadAt: time.Now().Format("2006-01-02 15:04:05"),
@@ -59,9 +62,20 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		newFile.Seek(0, 0)
 		fileMeta.FileSha1 = util.FileSha1(newFile)
-		//meta.UpdateFileMeta(fileMeta)
 		meta.UpdateFileMetaDB(fileMeta)
-		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
+
+		// feat: 用户文件表更新逻辑
+		r.ParseForm()
+		username := r.Form.Get("username")
+		suc := db.OnUserFileUploadFinished(username, fileMeta.FileSha1,
+			fileMeta.FileName, fileMeta.FileSize)
+		if suc {
+			http.Redirect(w, r, "/static/view/home.html", http.StatusFound)
+		} else {
+			w.Write([]byte("Upload Failed."))
+		}
+
+		return
 	}
 }
 
@@ -95,10 +109,14 @@ func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	limitCnt, _ := strconv.Atoi(r.Form.Get("limit"))
-	//fileMetas := meta.GetLastFileMetas(limitCnt)
-	fileMetas, _ := meta.GetLastFileMetasDB(limitCnt)
+	username := r.Form.Get("username")
+	userFiles, err := db.QueryUserFileMetas(username, limitCnt)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	data, err := json.Marshal(fileMetas)
+	data, err := json.Marshal(userFiles)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -133,6 +151,74 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-disposition",
 		fmt.Sprintf("attachment;filename=\"%s\"", fMeta.FileName))
 	w.Write(data)
+
+}
+
+func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	username := r.Form.Get("username")
+	filehash := r.Form.Get("filehash")
+	filename := r.Form.Get("filename")
+	filesize, _ := strconv.Atoi(r.Form.Get("filesize"))
+
+	fileMeta, err := meta.GetFileMetaDB(filehash)
+
+	if err != nil {
+		fmt.Printf("err: %s\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if fileMeta == nil {
+		resp := util.RespMsg{
+			Code: -1,
+			Msg:  "秒传失败，请访问普通上传接口",
+		}
+		w.Write(resp.JSONBytes())
+		return
+	}
+
+	suc := db.OnUserFileUploadFinished(
+		username, filehash, filename, int64(filesize))
+
+	var resp util.RespMsg
+	if suc {
+		resp = util.RespMsg{
+			Code: 0,
+			Msg:  "秒传成功",
+		}
+	} else {
+		resp = util.RespMsg{
+			Code: -2,
+			Msg:  "秒传失败，请稍后重试",
+		}
+	}
+
+	w.Write(resp.JSONBytes())
+	return
+}
+
+//DownloadURLHandler 获取直链
+func DownloadURLHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	filehash := r.Form.Get("filehash")
+	row, _ := meta.GetFileMetaDB(filehash)
+
+	if strings.HasPrefix(row.Location, "/tmp") {
+		username := r.Form.Get("username")
+		token := r.Form.Get("token")
+		tmpUrl := fmt.Sprintf("http://%s/file/download?filehash=%s&usernmae=%s&token=%s",
+			r.Host, filehash, username, token)
+		w.Write([]byte(tmpUrl))
+	} else if strings.HasPrefix(row.Location, "/ceph") {
+		// TODO: download from ceph
+	} else if strings.HasPrefix(row.Location, "oss/") {
+		// TODO: download from aliyun
+	}
+
+	// 都没有走到，返回 404
+	w.WriteHeader(http.StatusNotFound)
 
 }
 

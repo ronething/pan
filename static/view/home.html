@@ -72,7 +72,8 @@
       type: "POST",
       error: function (jqXHR, textStatus, errorThrown) {
         if (textStatus == "error") {
-          alert(textStatus + " : " + errorThrown);
+          window.location.href = "/";
+          // alert(textStatus + " : " + errorThrown);
         } else {
           alert(textStatus);
         }
@@ -127,9 +128,10 @@
           cell.innerHTML = data[i].LastUpdated;
 
           cell = x.insertCell();
+
           cell.innerHTML = '<button class="btn btn-success" ' +
             'style="height:30px;margin:5px 0;"' +
-            'onClick = "downloadFile(\'http://localhost:8080/file/' +
+            'onClick = "downloadFile(\'http://127.0.0.1:8887/file/' +
             'downloadurl?filehash=' + data[i].FileHash + '&' + queryParams() + '\')">下载</button>';
         }
       }

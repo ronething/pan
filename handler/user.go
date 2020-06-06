@@ -85,11 +85,11 @@ func SignInHandler(w http.ResponseWriter, r *http.Request) {
 		Msg:  "OK",
 		Data: struct {
 			Location string
-			UserName string
+			Username string
 			Token    string
 		}{
 			Location: "http://" + r.Host + "/static/view/home.html",
-			UserName: username,
+			Username: username,
 			Token:    token,
 		},
 	}
@@ -130,15 +130,4 @@ func GenToken(username string) string {
 	ts := fmt.Sprintf("%x", time.Now().Unix())
 	tokenPrefix := util.MD5([]byte(username + ts + "_tokensalt"))
 	return tokenPrefix + ts[:8]
-}
-
-//IsTokenValid token是否有效
-func IsTokenValid(token string) bool {
-	if len(token) != 40 {
-		return false
-	}
-	// TODO: 判断 token 的时效性，是否过期
-	// TODO: 从数据库表 tbl_user_token 查询 username 对应的token信息
-	// TODO: 对比两个 token 是否一致
-	return true
 }
