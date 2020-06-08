@@ -11,13 +11,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/ronething/pan/config"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var db *sql.DB
 
 func init() {
-	db, _ = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/fileserver?charset=utf8")
+	db, _ = sql.Open("mysql", config.MySQLSource)
 	db.SetMaxOpenConns(1000) // 同时连接数
 	err := db.Ping()
 	if err != nil {

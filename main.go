@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ronething/pan/config"
+
 	"github.com/ronething/pan/handler"
 )
 
@@ -39,7 +41,7 @@ func main() {
 	http.HandleFunc("/user/signin", handler.SignInHandler) // 用户登录
 	http.HandleFunc("/user/info", handler.UserInfoHandler) // 用户信息
 
-	err := http.ListenAndServe("127.0.0.1:8887", nil)
+	err := http.ListenAndServe(config.UploadServiceHost, nil)
 	if err != nil {
 		fmt.Printf("Failed to start server, err: %s", err.Error())
 	}
